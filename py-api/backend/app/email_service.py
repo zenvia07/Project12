@@ -19,17 +19,31 @@ async def send_email_via_emailjs(
 ) -> bool:
     """Send email using EmailJS API"""
     try:
+        print(f"[EMAIL] Starting EmailJS send process for: {to_email}")
+        
         # Validate EmailJS configuration
-        if not settings.emailjs_service_id or not settings.emailjs_service_id.strip():
+        service_id = settings.emailjs_service_id.strip() if settings.emailjs_service_id else ""
+        template_id = settings.emailjs_template_id.strip() if settings.emailjs_template_id else ""
+        public_key = settings.emailjs_public_key.strip() if settings.emailjs_public_key else ""
+        
+        print(f"[EMAIL] Checking EmailJS configuration...")
+        print(f"[EMAIL] SERVICE_ID: {'SET' if service_id else 'MISSING'} ({service_id[:10] + '...' if service_id else 'NOT SET'})")
+        print(f"[EMAIL] TEMPLATE_ID: {'SET' if template_id else 'MISSING'} ({template_id[:10] + '...' if template_id else 'NOT SET'})")
+        print(f"[EMAIL] PUBLIC_KEY: {'SET' if public_key else 'MISSING'} ({public_key[:10] + '...' if public_key else 'NOT SET'})")
+        
+        if not service_id:
             print("[EMAIL ERROR] EMAILJS_SERVICE_ID not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please add EMAILJS_SERVICE_ID=service_19iukbk to Railway Variables")
             return False
         
-        if not settings.emailjs_template_id or not settings.emailjs_template_id.strip():
+        if not template_id:
             print("[EMAIL ERROR] EMAILJS_TEMPLATE_ID not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please add EMAILJS_TEMPLATE_ID=template_719afue to Railway Variables")
             return False
         
-        if not settings.emailjs_public_key or not settings.emailjs_public_key.strip():
+        if not public_key:
             print("[EMAIL ERROR] EMAILJS_PUBLIC_KEY not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please add EMAILJS_PUBLIC_KEY=ey_DNap33nEybzqZd to Railway Variables")
             return False
         
         # EmailJS API endpoint
@@ -52,24 +66,37 @@ async def send_email_via_emailjs(
         
         # Prepare request payload
         payload = {
-            "service_id": settings.emailjs_service_id.strip(),
-            "template_id": settings.emailjs_template_id.strip(),
-            "user_id": settings.emailjs_public_key.strip(),
+            "service_id": service_id,
+            "template_id": template_id,
+            "user_id": public_key,
             "template_params": template_params
         }
         
         print(f"[EMAIL] Sending email via EmailJS to: {to_email}")
-        print(f"[EMAIL] Using service_id: {settings.emailjs_service_id.strip()}")
+        print(f"[EMAIL] Using service_id: {service_id}")
+        print(f"[EMAIL] Using template_id: {template_id}")
+        print(f"[EMAIL] Payload prepared, sending request to EmailJS API...")
         
         # Send request to EmailJS
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(emailjs_url, json=payload)
-            
-            if response.status_code == 200:
-                print(f"[EMAIL SUCCESS] Email sent successfully via EmailJS to {to_email}")
-                return True
-            else:
-                print(f"[EMAIL ERROR] EmailJS API error: {response.status_code} - {response.text}")
+            try:
+                response = await client.post(emailjs_url, json=payload)
+                print(f"[EMAIL] EmailJS API response status: {response.status_code}")
+                
+                if response.status_code == 200:
+                    print(f"[EMAIL SUCCESS] Email sent successfully via EmailJS to {to_email}")
+                    return True
+                else:
+                    print(f"[EMAIL ERROR] EmailJS API error: {response.status_code}")
+                    print(f"[EMAIL ERROR] Response body: {response.text}")
+                    return False
+            except httpx.TimeoutException:
+                print("[EMAIL ERROR] EmailJS API request timed out after 30 seconds")
+                return False
+            except Exception as e:
+                print(f"[EMAIL ERROR] Exception while calling EmailJS API: {e}")
+                import traceback
+                traceback.print_exc()
                 return False
                 
     except Exception as e:
@@ -82,7 +109,12 @@ async def send_email_via_emailjs(
 async def send_activation_email(email: str, activation_token: str, user_name: str) -> bool:
     """Send account activation email"""
     try:
-        print(f"[EMAIL] Attempting to send activation email to: {email}")
+        print(f"[EMAIL] ========================================")
+        print(f"[EMAIL] Attempting to send activation email")
+        print(f"[EMAIL] To: {email}")
+        print(f"[EMAIL] User: {user_name}")
+        print(f"[EMAIL] Token: {activation_token[:20]}...")
+        print(f"[EMAIL] ========================================")
         
         # Create activation URL
         base_url = os.getenv("FRONTEND_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN")

@@ -20,6 +20,26 @@ async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
     await create_indexes()
+    
+    # Check EmailJS configuration
+    from .database import settings
+    print("\n[STARTUP] Checking EmailJS configuration...")
+    if settings.emailjs_service_id and settings.emailjs_service_id.strip():
+        print(f"[STARTUP] ✓ EMAILJS_SERVICE_ID: {settings.emailjs_service_id.strip()[:20]}...")
+    else:
+        print("[STARTUP] ✗ EMAILJS_SERVICE_ID: NOT SET - Emails will fail!")
+    
+    if settings.emailjs_template_id and settings.emailjs_template_id.strip():
+        print(f"[STARTUP] ✓ EMAILJS_TEMPLATE_ID: {settings.emailjs_template_id.strip()[:20]}...")
+    else:
+        print("[STARTUP] ✗ EMAILJS_TEMPLATE_ID: NOT SET - Emails will fail!")
+    
+    if settings.emailjs_public_key and settings.emailjs_public_key.strip():
+        print(f"[STARTUP] ✓ EMAILJS_PUBLIC_KEY: {settings.emailjs_public_key.strip()[:20]}...")
+    else:
+        print("[STARTUP] ✗ EMAILJS_PUBLIC_KEY: NOT SET - Emails will fail!")
+    print()
+    
     yield
     # Shutdown
     await close_mongo_connection()
