@@ -34,10 +34,13 @@ class Settings(BaseSettings):
 
 
 # Load settings with better error handling
+import sys
+from pydantic import ValidationError
+
 try:
     settings = Settings()
-except Exception as e:
-    import sys
+except ValidationError as e:
+    # Print error message only once
     print("\n" + "="*80)
     print("ERROR: Missing required environment variables!")
     print("="*80)
@@ -51,6 +54,9 @@ except Exception as e:
     print("  4. Add MONGODB_URI and JWT_SECRET_KEY")
     print("\nSee py-api/RAILWAY_ENV_VARIABLES.txt for all required variables.")
     print("="*80 + "\n")
+    sys.exit(1)
+except Exception as e:
+    print(f"\nERROR: Failed to load settings: {e}\n")
     sys.exit(1)
 
 # Global database client
