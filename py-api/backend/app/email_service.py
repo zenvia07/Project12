@@ -25,7 +25,16 @@ async def send_activation_email(email: str, activation_token: str, user_name: st
         # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = "Activate Your Account - Login API"
-        msg['From'] = settings.email_from  # Sender: zenvia07@gmail.com
+        
+        # Format sender with display name to hide email address
+        # If EMAIL_FROM already has a display name, use it; otherwise add one
+        if '<' in settings.email_from and '>' in settings.email_from:
+            # Already in format "Name <email@domain.com>"
+            msg['From'] = settings.email_from
+        else:
+            # Add display name to hide the actual email address
+            msg['From'] = f"Login App <{settings.email_from}>"
+        
         msg['To'] = email  # Recipient: the user who registered (e.g., akarshachinta@gmail.com)
         
         # Verify we're sending to the correct email (not the sender's email)
@@ -128,7 +137,16 @@ async def send_password_reset_email(email: str, reset_token: str, user_name: str
         # Create message
         msg = MIMEMultipart('alternative')
         msg['Subject'] = "Reset Your Password"
-        msg['From'] = settings.email_from
+        
+        # Format sender with display name to hide email address
+        # If EMAIL_FROM already has a display name, use it; otherwise add one
+        if '<' in settings.email_from and '>' in settings.email_from:
+            # Already in format "Name <email@domain.com>"
+            msg['From'] = settings.email_from
+        else:
+            # Add display name to hide the actual email address
+            msg['From'] = f"Login App <{settings.email_from}>"
+        
         msg['To'] = email
         
         # Create reset URL (adjust based on your frontend URL)
