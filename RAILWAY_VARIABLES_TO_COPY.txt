@@ -1,0 +1,16 @@
+MONGODB_URI=mongodb+srv://philbug36_db_user:FaMDgnao9sw6eC8l@cluster0.96tz3me.mongodb.net/?appName=Cluster0
+MONGODB_DB_NAME=login_app
+JWT_SECRET_KEY=ey0mvm-8a3rR4LL-Ypmz6CNOp9wLByi85T0g320ssbtJvos43Fn6_vdsVRvKIQmHx8z-qzJ9ohJg0jJ0vgGNsw
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+ENVIRONMENT=production
+API_PREFIX=/api
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=zenvia07@gmail.com
+SMTP_PASSWORD=ogntznelsmhkqdvi
+EMAIL_FROM=zenvia07@gmail.com
+FRONTEND_URL=https://your-railway-url.up.railway.app
+RATE_LIMIT_PER_MINUTE=60
+CACHE_TTL_SECONDS=300

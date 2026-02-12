@@ -136,14 +136,23 @@ Login API Team
         print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
         return True
     except smtplib.SMTPAuthenticationError as e:
-        print(f"[EMAIL ERROR] SMTP Authentication failed: {e}")
-        print("[EMAIL ERROR] Please check your email and app password in .env file")
+        error_msg = f"[EMAIL ERROR] SMTP Authentication failed: {e}"
+        print(error_msg)
+        print("[EMAIL ERROR] Please check your email and app password in Railway environment variables")
+        print(f"[EMAIL ERROR] SMTP_USER: {settings.smtp_user}")
+        print(f"[EMAIL ERROR] SMTP_PASSWORD length: {len(settings.smtp_password) if settings.smtp_password else 0} characters")
+        import traceback
+        traceback.print_exc()
         return False
     except smtplib.SMTPException as e:
-        print(f"[EMAIL ERROR] SMTP error: {e}")
+        error_msg = f"[EMAIL ERROR] SMTP error: {e}"
+        print(error_msg)
+        import traceback
+        traceback.print_exc()
         return False
     except Exception as e:
-        print(f"[EMAIL ERROR] Error sending activation email: {e}")
+        error_msg = f"[EMAIL ERROR] Error sending activation email: {e}"
+        print(error_msg)
         import traceback
         traceback.print_exc()
         return False
