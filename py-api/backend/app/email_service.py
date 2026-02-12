@@ -4,6 +4,7 @@ Supports both SMTP (for local dev) and SendGrid API (for Railway)
 """
 import smtplib
 import os
+import asyncio
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
@@ -72,42 +73,69 @@ async def send_email_via_sendgrid(email: str, subject: str, text_content: str, h
 
 
 async def send_email_via_smtp(email: str, subject: str, text_content: str, html_content: str, user_name: str) -> bool:
-    """Send email using SMTP (for local development)"""
-    try:
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = subject
-        
-        # Format sender with display name
-        if '<' in settings.email_from and '>' in settings.email_from:
-            msg['From'] = settings.email_from
-        else:
-            msg['From'] = f"Login App <{settings.email_from}>"
-        
-        msg['To'] = email
-        
-        # Attach parts
-        part1 = MIMEText(text_content, 'plain')
-        part2 = MIMEText(html_content, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send email
-        print(f"[EMAIL] Connecting to SMTP server: {settings.smtp_host}:{settings.smtp_port}")
-        server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
-        server.starttls()
-        server.login(settings.smtp_user, settings.smtp_password)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"[EMAIL SUCCESS] Email sent via SMTP to {email}")
-        return True
-        
-    except Exception as e:
-        print(f"[EMAIL ERROR] SMTP error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+    """Send email using SMTP (with retry logic for Railway network issues)"""
+    import time
+    
+    max_retries = 3
+    retry_delay = 2  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            
+            # Format sender with display name
+            if '<' in settings.email_from and '>' in settings.email_from:
+                msg['From'] = settings.email_from
+            else:
+                msg['From'] = f"Login App <{settings.email_from}>"
+            
+            msg['To'] = email
+            
+            # Attach parts
+            part1 = MIMEText(text_content, 'plain')
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            
+            # Send email with retry
+            print(f"[EMAIL] Attempt {attempt + 1}/{max_retries}: Connecting to SMTP server: {settings.smtp_host}:{settings.smtp_port}")
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
+            server.starttls()
+            server.login(settings.smtp_user, settings.smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            print(f"[EMAIL SUCCESS] Email sent via SMTP to {email}")
+            return True
+            
+        except OSError as e:
+            # Network unreachable or connection errors
+            error_msg = str(e)
+            if "Network is unreachable" in error_msg or "101" in error_msg:
+                if attempt < max_retries - 1:
+                    print(f"[EMAIL] Network error (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    print(f"[EMAIL ERROR] SMTP network unreachable after {max_retries} attempts. Railway may be blocking SMTP.")
+                    print(f"[EMAIL] Consider using SendGrid API instead (set SENDGRID_API_KEY)")
+                    return False
+            else:
+                print(f"[EMAIL ERROR] SMTP OSError: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
+                
+        except Exception as e:
+            print(f"[EMAIL ERROR] SMTP error: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    return False
 
 
 async def send_activation_email(email: str, activation_token: str, user_name: str) -> bool:
@@ -182,23 +210,28 @@ Login API Team
         </html>
         """
         
-        # Try SendGrid API first (works on Railway), fallback to SMTP
+        # Try SendGrid API first if available (works reliably on Railway)
+        # Otherwise try SMTP with retry logic
         sendgrid_key = os.getenv("SENDGRID_API_KEY")
         if sendgrid_key:
             print("[EMAIL] Using SendGrid API (Railway compatible)")
-            return await send_email_via_sendgrid(email, subject, text_content, html_content, user_name)
-        else:
-            print("[EMAIL] Using SMTP (local development)")
-            # Validate SMTP configuration
-            if not settings.smtp_user or settings.smtp_user == "your-email@gmail.com":
-                print("[EMAIL ERROR] SMTP user not configured")
-                return False
-            
-            if not settings.smtp_password or settings.smtp_password == "your-app-password":
-                print("[EMAIL ERROR] SMTP password not configured")
-                return False
-            
-            return await send_email_via_smtp(email, subject, text_content, html_content, user_name)
+            result = await send_email_via_sendgrid(email, subject, text_content, html_content, user_name)
+            if result:
+                return True
+            print("[EMAIL] SendGrid failed, falling back to SMTP...")
+        
+        # Try SMTP (may work intermittently on Railway)
+        print("[EMAIL] Attempting SMTP connection...")
+        # Validate SMTP configuration
+        if not settings.smtp_user or settings.smtp_user == "your-email@gmail.com":
+            print("[EMAIL ERROR] SMTP user not configured")
+            return False
+        
+        if not settings.smtp_password or settings.smtp_password == "your-app-password":
+            print("[EMAIL ERROR] SMTP password not configured")
+            return False
+        
+        return await send_email_via_smtp(email, subject, text_content, html_content, user_name)
             
     except Exception as e:
         error_msg = f"[EMAIL ERROR] Error sending activation email: {e}"
@@ -253,15 +286,19 @@ If you didn't request this, please ignore this email and your password will rema
         </html>
         """
         
-        # Try SendGrid first, fallback to SMTP
+        # Try SendGrid first if available, fallback to SMTP
         sendgrid_key = os.getenv("SENDGRID_API_KEY")
         if sendgrid_key:
-            return await send_email_via_sendgrid(email, subject, text_content, html_content, user_name)
-        else:
-            if not settings.smtp_user or not settings.smtp_password:
-                print("[EMAIL ERROR] SMTP not configured and SendGrid not available")
-                return False
-            return await send_email_via_smtp(email, subject, text_content, html_content, user_name)
+            result = await send_email_via_sendgrid(email, subject, text_content, html_content, user_name)
+            if result:
+                return True
+            print("[EMAIL] SendGrid failed, falling back to SMTP...")
+        
+        if not settings.smtp_user or not settings.smtp_password:
+            print("[EMAIL ERROR] SMTP not configured and SendGrid not available")
+            return False
+        
+        return await send_email_via_smtp(email, subject, text_content, html_content, user_name)
             
     except Exception as e:
         print(f"[EMAIL ERROR] Error sending password reset email: {e}")
