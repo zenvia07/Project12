@@ -20,25 +20,74 @@ EmailJS is an email service that works via HTTP API (perfect for Railway deploym
 
 1. Go to **Email Templates**
 2. Click **Create New Template**
-3. Choose a template or start from scratch
-4. Set up your template with these variables:
-   - `{{to_email}}` - Recipient email
-   - `{{to_name}}` - Recipient name
-   - `{{subject}}` - Email subject
-   - `{{message_html}}` - HTML email content
-   - `{{activation_url}}` - Activation link (for activation emails)
-   - `{{reset_url}}` - Reset link (for password reset emails)
+3. **Use the template from `EMAILJS_TEMPLATES.md`** (see that file for complete templates)
 
-**Example Template:**
+**Quick Template (Copy this):**
+
+**Subject:**
 ```
-Subject: {{subject}}
-
-Hello {{to_name}},
-
-{{message_html}}
+{{subject}}
 ```
 
-5. Copy the **Template ID** (e.g., `template_xxxxx`)
+**Content (HTML):**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .button {
+            background-color: #6366f1;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="color: #6366f1;">Hello {{to_name}},</h2>
+    
+    {{#message_html}}
+    {{message_html}}
+    {{/message_html}}
+    
+    {{#activation_url}}
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{activation_url}}" class="button">Activate Account</a>
+    </div>
+    <p style="word-break: break-all; color: #666;">{{activation_url}}</p>
+    {{/activation_url}}
+    
+    {{#reset_url}}
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{reset_url}}" class="button">Reset Password</a>
+    </div>
+    <p style="word-break: break-all; color: #666;">{{reset_url}}</p>
+    {{/reset_url}}
+    
+    <p style="color: #999; font-size: 12px; margin-top: 30px;">
+        If you didn't request this, please ignore this email.
+    </p>
+</body>
+</html>
+```
+
+4. **Paste into EmailJS template editor**
+5. **Save the template**
+6. Copy the **Template ID** (e.g., `template_xxxxx`)
+
+**Note:** See `EMAILJS_TEMPLATES.md` for detailed templates with better formatting.
 
 ## Step 4: Get Public Key
 
