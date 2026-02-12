@@ -188,54 +188,37 @@ Login API Team
                             break
                 
                 except OSError as e:
-                error_msg = str(e)
-                print(f"[EMAIL ERROR] OSError: {error_msg}")
-                if ("Network is unreachable" in error_msg or "101" in error_msg or "timed out" in error_msg.lower()) and attempt < max_retries - 1:
-                    print(f"[EMAIL] Network error (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                else:
-                    print(f"[EMAIL ERROR] SMTP network error: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    error_msg = str(e)
+                    print(f"[EMAIL ERROR] OSError on port {config['port']}: {error_msg}")
                     if attempt < max_retries - 1:
                         await asyncio.sleep(retry_delay)
-                        retry_delay *= 2
                         continue
-                    return False
+                    break
                     
-            except smtplib.SMTPAuthenticationError as e:
-                error_msg = f"[EMAIL ERROR] SMTP Authentication failed: {e}"
-                print(error_msg)
-                print("[EMAIL ERROR] Please check your email and app password in Railway environment variables")
-                print(f"[EMAIL ERROR] SMTP_USER: {settings.smtp_user}")
-                print(f"[EMAIL ERROR] SMTP_PASSWORD length: {len(settings.smtp_password) if settings.smtp_password else 0} characters")
-                import traceback
-                traceback.print_exc()
-                return False
-                
-            except smtplib.SMTPException as e:
-                error_msg = f"[EMAIL ERROR] SMTP error: {e}"
-                print(error_msg)
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                import traceback
-                traceback.print_exc()
-                return False
-                
-            except Exception as e:
-                error_msg = f"[EMAIL ERROR] Error sending activation email: {e}"
-                print(error_msg)
-                import traceback
-                traceback.print_exc()
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                return False
+                except smtplib.SMTPAuthenticationError as e:
+                    error_msg = f"[EMAIL ERROR] SMTP Authentication failed on port {config['port']}: {e}"
+                    print(error_msg)
+                    print("[EMAIL ERROR] Please check your email and app password in Railway environment variables")
+                    print(f"[EMAIL ERROR] SMTP_USER: {settings.smtp_user}")
+                    print(f"[EMAIL ERROR] SMTP_PASSWORD length: {len(settings.smtp_password) if settings.smtp_password else 0} characters")
+                    # Don't retry auth errors, but try next port
+                    break
+                    
+                except smtplib.SMTPException as e:
+                    error_msg = f"[EMAIL ERROR] SMTP error on port {config['port']}: {e}"
+                    print(error_msg)
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    break
+                    
+                except Exception as e:
+                    error_msg = f"[EMAIL ERROR] Error on port {config['port']}: {e}"
+                    print(error_msg)
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    break
         
         print("[EMAIL ERROR] Failed to send email after all retry attempts")
         return False
