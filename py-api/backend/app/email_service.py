@@ -50,11 +50,29 @@ async def send_activation_email(email: str, activation_token: str, user_name: st
             return False
         
         # Create activation URL
-        # Get the base URL from environment or use localhost as default
+        # Get the base URL from environment or detect from Railway
         import os
-        base_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        # Check for Railway's public domain or custom FRONTEND_URL
+        base_url = os.getenv("FRONTEND_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN")
+        
+        # If still not set, try to detect from Railway environment
+        if not base_url:
+            # Railway sets RAILWAY_PUBLIC_DOMAIN, but if not available, use a default
+            # For Railway deployments, the frontend and backend are on the same domain
+            railway_url = os.getenv("RAILWAY_STATIC_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN")
+            if railway_url:
+                base_url = f"https://{railway_url}"
+            else:
+                # Fallback: use localhost for local development
+                base_url = "http://localhost:3000"
+        
+        # Ensure URL has protocol
+        if base_url and not base_url.startswith(("http://", "https://")):
+            base_url = f"https://{base_url}"
+        
         # Use root path with token parameter - frontend will detect and handle it
         activation_url = f"{base_url}/?token={activation_token}"
+        print(f"[EMAIL] Activation URL: {activation_url}")
         
         # Email body
         text = f"""
