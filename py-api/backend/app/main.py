@@ -66,9 +66,16 @@ app.include_router(users.router, prefix="/api", tags=["users"])
 # Serve static files (CSS, JS) - mount before catch-all
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend")
 if os.path.exists(frontend_path):
-    app.mount("/css", StaticFiles(directory=os.path.join(frontend_path, "css")), name="css")
-    app.mount("/js", StaticFiles(directory=os.path.join(frontend_path, "js")), name="js")
-    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="assets")
+    css_path = os.path.join(frontend_path, "css")
+    js_path = os.path.join(frontend_path, "js")
+    assets_path = os.path.join(frontend_path, "assets")
+    
+    if os.path.exists(css_path):
+        app.mount("/css", StaticFiles(directory=css_path), name="css")
+    if os.path.exists(js_path):
+        app.mount("/js", StaticFiles(directory=js_path), name="js")
+    if os.path.exists(assets_path):
+        app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
 # API endpoints
 @app.get("/api/health")
