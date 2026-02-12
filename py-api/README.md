@@ -168,6 +168,32 @@ python test_db_simple.py
 
 ## Deployment
 
+### Railway
+
+1. **Create a Railway account** at [railway.app](https://railway.app)
+2. **Create a new project** and connect your GitHub repository (`zenvia07/Project12`)
+3. **Set the root directory** to `py-api` in Railway project settings
+4. **Add environment variables** in Railway dashboard:
+   - `MONGODB_URI` - Your MongoDB connection string
+   - `MONGODB_DB_NAME` - Database name (e.g., `login_app`)
+   - `JWT_SECRET_KEY` - A secure random secret key
+   - `JWT_ALGORITHM` - `HS256`
+   - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` - `30`
+   - `JWT_REFRESH_TOKEN_EXPIRE_DAYS` - `7`
+   - `ENVIRONMENT` - `production`
+   - `API_PREFIX` - `/api`
+   - `SMTP_HOST` - Your SMTP server (e.g., `smtp.gmail.com`)
+   - `SMTP_PORT` - `587`
+   - `SMTP_USER` - Your email address
+   - `SMTP_PASSWORD` - Your email app password
+   - `EMAIL_FROM` - Sender email address
+   - `RATE_LIMIT_PER_MINUTE` - `60`
+   - `CACHE_TTL_SECONDS` - `300`
+5. **Deploy** - Railway will automatically detect the Dockerfile and deploy
+6. **Get your URL** - Railway will provide a public URL for your application
+
+**Note**: Railway automatically sets the `PORT` environment variable, so no need to configure it manually.
+
 ### Vercel
 
 1. Install Vercel CLI: `npm i -g vercel`
