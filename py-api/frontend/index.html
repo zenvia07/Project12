@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - User Authentication</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Form -->
+        <div class="form-container" id="loginContainer">
+            <div class="form-header">
+                <h1>Welcome Back</h1>
+                <p>Sign in to your account</p>
+            </div>
+            
+            <form id="loginForm" class="auth-form">
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="loginEmail" 
+                        name="email" 
+                        required 
+                        autocomplete="email"
+                        placeholder="Enter your email"
+                    >
+                    <span class="error-message" id="loginEmailError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            name="password" 
+                            required 
+                            autocomplete="current-password"
+                            placeholder="Enter your password"
+                        >
+                        <button type="button" class="toggle-password" id="toggleLoginPassword" aria-label="Toggle password visibility">
+                            <span class="eye-icon">👁️</span>
+                        </button>
+                    </div>
+                    <span class="error-message" id="loginPasswordError"></span>
+                </div>
+                
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rememberMe">
+                        <span>Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-password-link" id="forgotPasswordLink">Forgot Password?</a>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+                
+                <div class="form-footer">
+                    <p>Don't have an account? <a href="#" id="showRegisterLink">Sign Up</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="form-container hidden" id="registerContainer">
+            <div class="form-header">
+                <h1>Create Account</h1>
+                <p>Sign up to get started</p>
+            </div>
+            
+            <form id="registerForm" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="firstName">First Name</label>
+                        <input 
+                            type="text" 
+                            id="firstName" 
+                            name="first_name" 
+                            required 
+                            autocomplete="given-name"
+                            placeholder="First name"
+                        >
+                        <span class="error-message" id="firstNameError"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lastName">Last Name</label>
+                        <input 
+                            type="text" 
+                            id="lastName" 
+                            name="last_name" 
+                            required 
+                            autocomplete="family-name"
+                            placeholder="Last name"
+                        >
+                        <span class="error-message" id="lastNameError"></span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dateOfBirth">Date of Birth</label>
+                    <input 
+                        type="date" 
+                        id="dateOfBirth" 
+                        name="date_of_birth" 
+                        required 
+                        autocomplete="bday"
+                    >
+                    <span class="error-message" id="dateOfBirthError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerEmail">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="registerEmail" 
+                        name="email" 
+                        required 
+                        autocomplete="email"
+                        placeholder="Enter your email"
+                    >
+                    <span class="error-message" id="registerEmailError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="phoneNumber">Phone Number</label>
+                    <input 
+                        type="tel" 
+                        id="phoneNumber" 
+                        name="phone_number" 
+                        required 
+                        autocomplete="tel"
+                        placeholder="+1234567890"
+                    >
+                    <span class="error-message" id="phoneNumberError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="registerPassword" 
+                            name="password" 
+                            required 
+                            autocomplete="new-password"
+                            placeholder="Create a password"
+                        >
+                        <button type="button" class="toggle-password" id="toggleRegisterPassword" aria-label="Toggle password visibility">
+                            <span class="eye-icon">👁️</span>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength"></div>
+                    <span class="error-message" id="registerPasswordError"></span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="registerBtn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+                
+                <div class="form-footer">
+                    <p>Already have an account? <a href="#" id="showLoginLink">Sign In</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Forgot Password Form -->
+        <div class="form-container hidden" id="forgotPasswordContainer">
+            <div class="form-header">
+                <h1>Reset Password</h1>
+                <p>Enter your email to receive a reset link</p>
+            </div>
+            
+            <form id="forgotPasswordForm" class="auth-form">
+                <div class="form-group">
+                    <label for="forgotEmail">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="forgotEmail" 
+                        name="email" 
+                        required 
+                        autocomplete="email"
+                        placeholder="Enter your email"
+                    >
+                    <span class="error-message" id="forgotEmailError"></span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="forgotPasswordBtn">
+                    <span class="btn-text">Send Reset Link</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+                
+                <div class="form-footer">
+                    <p><a href="#" id="backToLoginLink">Back to Sign In</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Activation Page -->
+        <div class="form-container hidden" id="activationContainer">
+            <div class="form-header">
+                <h1>Activate Account</h1>
+                <p>Please wait while we activate your account...</p>
+            </div>
+            <div class="activation-status" id="activationStatus"></div>
+        </div>
+
+        <!-- Dashboard (shown after login) -->
+        <div class="form-container hidden" id="dashboardContainer">
+            <div class="form-header">
+                <h1>Welcome!</h1>
+                <p id="userWelcomeMessage">Loading your profile...</p>
+            </div>
+            <div class="dashboard-content" id="dashboardContent">
+                <div class="user-info" id="userInfo"></div>
+                <button class="btn btn-secondary" id="changePasswordBtn">Change Password</button>
+                <button class="btn btn-danger" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+        <!-- Change Password Form -->
+        <div class="form-container hidden" id="changePasswordContainer">
+            <div class="form-header">
+                <h1>Change Password</h1>
+                <p>Update your password</p>
+            </div>
+            
+            <form id="changePasswordForm" class="auth-form">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="currentPassword" 
+                            name="current_password" 
+                            required 
+                            autocomplete="current-password"
+                            placeholder="Enter current password"
+                        >
+                        <button type="button" class="toggle-password" id="toggleCurrentPassword" aria-label="Toggle password visibility">
+                            <span class="eye-icon">👁️</span>
+                        </button>
+                    </div>
+                    <span class="error-message" id="currentPasswordError"></span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="newPassword" 
+                            name="new_password" 
+                            required 
+                            autocomplete="new-password"
+                            placeholder="Enter new password"
+                        >
+                        <button type="button" class="toggle-password" id="toggleNewPassword" aria-label="Toggle password visibility">
+                            <span class="eye-icon">👁️</span>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="newPasswordStrength"></div>
+                    <span class="error-message" id="newPasswordError"></span>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="changePasswordSubmitBtn">
+                    <span class="btn-text">Update Password</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+                
+                <div class="form-footer">
+                    <p><a href="#" id="backToDashboardLink">Back to Dashboard</a></p>
+                </div>
+            </form>
+        </div>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <span class="toast-message" id="toastMessage"></span>
+            <button class="toast-close" id="toastClose">&times;</button>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
