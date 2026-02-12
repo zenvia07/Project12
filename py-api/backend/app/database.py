@@ -84,8 +84,8 @@ async def connect_to_mongo():
         )
         # Test the connection
         await client.admin.command('ping')
-        database = client[settings.mongodb_db_name]
-        print(f"[SUCCESS] Connected to MongoDB: {settings.mongodb_db_name}")
+        database = client[db_name]
+        print(f"[SUCCESS] Connected to MongoDB: {db_name}")
         return database
     except ConnectionFailure as e:
         print(f"Failed to connect to MongoDB: {e}")
