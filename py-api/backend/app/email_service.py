@@ -126,15 +126,28 @@ Login API Team
         
         # Send email
         print(f"[EMAIL] Connecting to SMTP server: {settings.smtp_host}:{settings.smtp_port}")
-        with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
+        print(f"[EMAIL] SMTP_USER: {settings.smtp_user}")
+        print(f"[EMAIL] SMTP_PASSWORD length: {len(settings.smtp_password) if settings.smtp_password else 0} characters")
+        print(f"[EMAIL] EMAIL_FROM: {settings.email_from}")
+        
+        try:
+            server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
+            print(f"[EMAIL] Connected to SMTP server")
             server.starttls()
-            print(f"[EMAIL] Logging in as: {settings.smtp_user}")
+            print(f"[EMAIL] TLS started")
+            print(f"[EMAIL] Attempting login as: {settings.smtp_user}")
             server.login(settings.smtp_user, settings.smtp_password)
+            print(f"[EMAIL] Login successful")
             print(f"[EMAIL] Sending email to: {email}")
             server.send_message(msg)
-        
-        print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
-        return True
+            server.quit()
+            print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
+            return True
+        except Exception as smtp_error:
+            print(f"[EMAIL ERROR] SMTP operation failed: {type(smtp_error).__name__}: {smtp_error}")
+            import traceback
+            traceback.print_exc()
+            raise  # Re-raise to be caught by outer exception handler
     except smtplib.SMTPAuthenticationError as e:
         error_msg = f"[EMAIL ERROR] SMTP Authentication failed: {e}"
         print(error_msg)
