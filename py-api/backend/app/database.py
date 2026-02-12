@@ -73,25 +73,39 @@ async def connect_to_mongo():
     """Create database connection"""
     global client, database
     try:
-        from urllib.parse import quote, urlparse, urlunparse
+        from urllib.parse import quote, urlparse, urlunparse, parse_qs, urlencode
         
         # Validate database name - ensure it's not empty
         db_name = settings.mongodb_db_name.strip() if settings.mongodb_db_name else "login_app"
         if not db_name:
             db_name = "login_app"
         
-        # URL encode password if it contains special characters
-        uri = settings.mongodb_uri
-        parsed = urlparse(uri)
+        # Clean and validate MongoDB URI
+        uri = settings.mongodb_uri.strip()
         
+        # Only modify URI if password needs encoding
+        parsed = urlparse(uri)
         if parsed.password and ('<' in parsed.password or '>' in parsed.password or '@' in parsed.password):
-            # Encode password
+            # Encode password and reconstruct URI properly
             encoded_password = quote(parsed.password, safe='')
             netloc = f"{parsed.username}:{encoded_password}@{parsed.hostname}"
             if parsed.port:
                 netloc += f":{parsed.port}"
-            uri = urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+            
+            # Preserve query string properly
+            query = parsed.query
+            if query:
+                # Validate query parameters are in key=value format
+                try:
+                    parse_qs(query, strict_parsing=True)
+                except ValueError:
+                    # If query is malformed, remove it
+                    print(f"[WARNING] Removing invalid query parameters from MongoDB URI")
+                    query = ""
+            
+            uri = urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, query, parsed.fragment))
         
+        # Use URI as-is if no password encoding needed
         client = AsyncIOMotorClient(
             uri,
             serverSelectionTimeoutMS=20000,
