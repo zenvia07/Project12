@@ -19,6 +19,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY py-api/backend/ ./backend/
 COPY py-api/frontend/ ./frontend/
 
+# Copy startup script
+COPY start.sh ./start.sh
+
+# Make startup script executable
+RUN chmod +x ./start.sh
+
 # Expose port
 EXPOSE 8000
 
@@ -26,6 +32,6 @@ EXPOSE 8000
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# Run the application
+# Run the application using startup script
 # Railway will set PORT environment variable, default to 8000 if not set
-CMD uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["./start.sh"]
