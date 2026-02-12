@@ -1,5 +1,17 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:3000/api';
+// Automatically detect the API URL based on current domain
+// In production (Railway), this will use the deployed URL
+// In development, it will use localhost
+const getApiBaseUrl = () => {
+    // If we're on localhost, use localhost API
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:8000/api';
+    }
+    // Otherwise, use the same origin (Railway deployment)
+    return `${window.location.origin}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // State Management
 let currentUser = null;
