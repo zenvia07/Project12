@@ -114,9 +114,42 @@ Login API Team
         msg.attach(part1)
         msg.attach(part2)
         
-        # Send email with retry logic
+        # Send email with retry logic and timeout protection
         max_retries = 3
         retry_delay = 2
+        
+        async def send_email_sync():
+            """Wrapper to run SMTP operations in executor with timeout"""
+            import concurrent.futures
+            loop = asyncio.get_event_loop()
+            
+            def _send():
+                smtp_host = settings.smtp_host.strip()
+                smtp_port = settings.smtp_port
+                
+                if not smtp_host:
+                    raise ValueError("SMTP_HOST is empty!")
+                
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                try:
+                    server.starttls()
+                    server.login(settings.smtp_user, settings.smtp_password)
+                    server.send_message(msg)
+                    return True
+                finally:
+                    try:
+                        server.quit()
+                    except:
+                        pass
+            
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = loop.run_in_executor(executor, _send)
+                try:
+                    return await asyncio.wait_for(future, timeout=30.0)
+                except asyncio.TimeoutError:
+                    print("[EMAIL ERROR] SMTP connection timed out after 30 seconds")
+                    print("[EMAIL ERROR] Railway may be blocking SMTP connections on port 587")
+                    return False
         
         for attempt in range(max_retries):
             try:
@@ -128,22 +161,24 @@ Login API Team
                     print("[EMAIL ERROR] SMTP_HOST is empty! Please set it in Railway Variables")
                     return False
                 
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
-                print(f"[EMAIL] Connected to SMTP server")
-                server.starttls()
-                print(f"[EMAIL] TLS started")
-                print(f"[EMAIL] Logging in as: {settings.smtp_user}")
-                server.login(settings.smtp_user, settings.smtp_password)
-                print(f"[EMAIL] Login successful")
-                print(f"[EMAIL] Sending email to: {email}")
-                server.send_message(msg)
-                server.quit()
-                print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
-                return True
+                result = await send_email_sync()
+                if result:
+                    print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
+                    return True
+                else:
+                    if attempt < max_retries - 1:
+                        print(f"[EMAIL] Connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
+                    else:
+                        print("[EMAIL ERROR] Failed to send email after all retry attempts")
+                        return False
                 
             except OSError as e:
                 error_msg = str(e)
-                if ("Network is unreachable" in error_msg or "101" in error_msg) and attempt < max_retries - 1:
+                print(f"[EMAIL ERROR] OSError: {error_msg}")
+                if ("Network is unreachable" in error_msg or "101" in error_msg or "timed out" in error_msg.lower()) and attempt < max_retries - 1:
                     print(f"[EMAIL] Network error (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2
@@ -152,6 +187,10 @@ Login API Team
                     print(f"[EMAIL ERROR] SMTP network error: {e}")
                     import traceback
                     traceback.print_exc()
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2
+                        continue
                     return False
                     
             except smtplib.SMTPAuthenticationError as e:
@@ -167,6 +206,10 @@ Login API Team
             except smtplib.SMTPException as e:
                 error_msg = f"[EMAIL ERROR] SMTP error: {e}"
                 print(error_msg)
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
                 import traceback
                 traceback.print_exc()
                 return False
@@ -176,8 +219,13 @@ Login API Team
                 print(error_msg)
                 import traceback
                 traceback.print_exc()
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+                    continue
                 return False
         
+        print("[EMAIL ERROR] Failed to send email after all retry attempts")
         return False
         
     except Exception as e:
