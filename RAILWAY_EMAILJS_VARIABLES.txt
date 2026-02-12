@@ -1,0 +1,58 @@
+===========================================
+EMAILJS RAILWAY ENVIRONMENT VARIABLES
+===========================================
+
+Add these 3 variables to your Railway project:
+
+1. EMAILJS_SERVICE_ID = service_19iukbk
+2. EMAILJS_TEMPLATE_ID = template_719afue
+3. EMAILJS_PUBLIC_KEY = ey_DNap33nEybzqZd
+
+===========================================
+HOW TO ADD IN RAILWAY:
+===========================================
+
+1. Go to Railway Dashboard
+2. Click on your service (Project12)
+3. Go to "Variables" tab
+4. Click "+ New Variable" for each:
+
+   Variable 1:
+   Name: EMAILJS_SERVICE_ID
+   Value: service_19iukbk
+
+   Variable 2:
+   Name: EMAILJS_TEMPLATE_ID
+   Value: template_719afue
+
+   Variable 3:
+   Name: EMAILJS_PUBLIC_KEY
+   Value: ey_DNap33nEybzqZd
+
+5. Save all variables
+6. Railway will auto-redeploy
+
+===========================================
+YOUR EMAILJS CREDENTIALS:
+===========================================
+
+Service ID: service_19iukbk
+Template ID: template_719afue
+Public Key: ey_DNap33nEybzqZd
+
+===========================================
+TEMPLATE CHECKLIST:
+===========================================
+
+Make sure your EmailJS template (template_719afue) includes these variables:
+
+✅ {{to_email}} - Recipient email
+✅ {{to_name}} - Recipient name  
+✅ {{subject}} - Email subject
+✅ {{message_html}} - HTML email content
+✅ {{activation_url}} - Activation link (for activation emails)
+✅ {{reset_url}} - Reset link (for password reset emails)
+
+If your template doesn't have these variables, update it in EmailJS dashboard.
+
+===========================================

@@ -98,9 +98,20 @@ EmailJS is an email service that works via HTTP API (perfect for Railway deploym
 
 Add these 3 variables to your Railway project:
 
-1. **EMAILJS_SERVICE_ID** = Your Service ID (e.g., `service_xxxxx`)
-2. **EMAILJS_TEMPLATE_ID** = Your Template ID (e.g., `template_xxxxx`)
-3. **EMAILJS_PUBLIC_KEY** = Your Public Key (e.g., `xxxxxxxxxxxxx`)
+1. **EMAILJS_SERVICE_ID** = `service_19iukbk`
+2. **EMAILJS_TEMPLATE_ID** = `template_719afue`
+3. **EMAILJS_PUBLIC_KEY** = `ey_DNap33nEybzqZd`
+
+**Steps:**
+1. Go to Railway Dashboard → Your Service → Variables tab
+2. Click "+ New Variable" for each:
+   - Name: `EMAILJS_SERVICE_ID`, Value: `service_19iukbk`
+   - Name: `EMAILJS_TEMPLATE_ID`, Value: `template_719afue`
+   - Name: `EMAILJS_PUBLIC_KEY`, Value: `ey_DNap33nEybzqZd`
+3. Save all variables
+4. Railway will auto-redeploy
+
+**See `RAILWAY_EMAILJS_VARIABLES.txt` for quick reference.**
 
 ## Step 6: Test
 
