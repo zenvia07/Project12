@@ -16,12 +16,19 @@ async def send_activation_email(email: str, activation_token: str, user_name: st
         print(f"[EMAIL] Attempting to send activation email to: {email}")
         
         # Validate email configuration
-        if not settings.smtp_user or settings.smtp_user == "your-email@gmail.com":
-            print("[EMAIL ERROR] SMTP user not configured")
+        if not settings.smtp_host or settings.smtp_host.strip() == "":
+            print("[EMAIL ERROR] SMTP_HOST not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please set SMTP_HOST=smtp.gmail.com in Railway Variables")
             return False
         
-        if not settings.smtp_password or settings.smtp_password == "your-app-password":
-            print("[EMAIL ERROR] SMTP password not configured")
+        if not settings.smtp_user or settings.smtp_user == "your-email@gmail.com" or settings.smtp_user.strip() == "":
+            print("[EMAIL ERROR] SMTP_USER not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please set SMTP_USER=zenvia07@gmail.com in Railway Variables")
+            return False
+        
+        if not settings.smtp_password or settings.smtp_password == "your-app-password" or settings.smtp_password.strip() == "":
+            print("[EMAIL ERROR] SMTP_PASSWORD not configured in Railway environment variables")
+            print("[EMAIL ERROR] Please set SMTP_PASSWORD=ogntznelsmhkqdvi in Railway Variables")
             return False
         
         # Ensure recipient is different from sender
@@ -113,8 +120,15 @@ Login API Team
         
         for attempt in range(max_retries):
             try:
-                print(f"[EMAIL] Attempt {attempt + 1}/{max_retries}: Connecting to SMTP server: {settings.smtp_host}:{settings.smtp_port}")
-                server = smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30)
+                smtp_host = settings.smtp_host.strip()
+                smtp_port = settings.smtp_port
+                print(f"[EMAIL] Attempt {attempt + 1}/{max_retries}: Connecting to SMTP server: {smtp_host}:{smtp_port}")
+                
+                if not smtp_host:
+                    print("[EMAIL ERROR] SMTP_HOST is empty! Please set it in Railway Variables")
+                    return False
+                
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=30)
                 print(f"[EMAIL] Connected to SMTP server")
                 server.starttls()
                 print(f"[EMAIL] TLS started")
