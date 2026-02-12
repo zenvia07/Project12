@@ -35,12 +35,13 @@ class Settings(BaseSettings):
 
 # Load settings with better error handling
 import sys
+import time
 from pydantic import ValidationError
 
 try:
     settings = Settings()
 except ValidationError as e:
-    # Print error message only once
+    # Print error message only once, then wait before exit to prevent rapid restarts
     print("\n" + "="*80)
     print("ERROR: Missing required environment variables!")
     print("="*80)
@@ -53,10 +54,14 @@ except ValidationError as e:
     print("  3. Go to 'Variables' tab")
     print("  4. Add MONGODB_URI and JWT_SECRET_KEY")
     print("\nSee py-api/RAILWAY_ENV_VARIABLES.txt for all required variables.")
-    print("="*80 + "\n")
+    print("="*80)
+    print("\nWaiting 30 seconds before exit to prevent rapid restarts...")
+    print("Add the environment variables in Railway to fix this issue.\n")
+    time.sleep(30)  # Wait 30 seconds before exiting to reduce restart spam
     sys.exit(1)
 except Exception as e:
     print(f"\nERROR: Failed to load settings: {e}\n")
+    time.sleep(30)
     sys.exit(1)
 
 # Global database client
