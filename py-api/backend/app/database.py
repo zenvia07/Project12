@@ -64,6 +64,11 @@ async def connect_to_mongo():
     try:
         from urllib.parse import quote, urlparse, urlunparse
         
+        # Validate database name - ensure it's not empty
+        db_name = settings.mongodb_db_name.strip() if settings.mongodb_db_name else "login_app"
+        if not db_name:
+            db_name = "login_app"
+        
         # URL encode password if it contains special characters
         uri = settings.mongodb_uri
         parsed = urlparse(uri)
