@@ -1,40 +1,88 @@
 """
 Email service for sending activation and password reset emails
+Uses EmailJS HTTP API (works on Railway)
 """
-import smtplib
 import os
-import asyncio
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import httpx
 from typing import Optional
 from .database import settings
+
+
+async def send_email_via_emailjs(
+    to_email: str,
+    subject: str,
+    html_content: str,
+    text_content: str,
+    user_name: str,
+    activation_url: str = None,
+    reset_url: str = None
+) -> bool:
+    """Send email using EmailJS API"""
+    try:
+        # Validate EmailJS configuration
+        if not settings.emailjs_service_id or not settings.emailjs_service_id.strip():
+            print("[EMAIL ERROR] EMAILJS_SERVICE_ID not configured in Railway environment variables")
+            return False
+        
+        if not settings.emailjs_template_id or not settings.emailjs_template_id.strip():
+            print("[EMAIL ERROR] EMAILJS_TEMPLATE_ID not configured in Railway environment variables")
+            return False
+        
+        if not settings.emailjs_public_key or not settings.emailjs_public_key.strip():
+            print("[EMAIL ERROR] EMAILJS_PUBLIC_KEY not configured in Railway environment variables")
+            return False
+        
+        # EmailJS API endpoint
+        emailjs_url = "https://api.emailjs.com/api/v1.0/email/send"
+        
+        # Prepare template parameters
+        template_params = {
+            "to_email": to_email,
+            "to_name": user_name,
+            "subject": subject,
+            "message_html": html_content,
+            "message_text": text_content,
+        }
+        
+        # Add activation or reset URL if provided
+        if activation_url:
+            template_params["activation_url"] = activation_url
+        if reset_url:
+            template_params["reset_url"] = reset_url
+        
+        # Prepare request payload
+        payload = {
+            "service_id": settings.emailjs_service_id.strip(),
+            "template_id": settings.emailjs_template_id.strip(),
+            "user_id": settings.emailjs_public_key.strip(),
+            "template_params": template_params
+        }
+        
+        print(f"[EMAIL] Sending email via EmailJS to: {to_email}")
+        print(f"[EMAIL] Using service_id: {settings.emailjs_service_id.strip()}")
+        
+        # Send request to EmailJS
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(emailjs_url, json=payload)
+            
+            if response.status_code == 200:
+                print(f"[EMAIL SUCCESS] Email sent successfully via EmailJS to {to_email}")
+                return True
+            else:
+                print(f"[EMAIL ERROR] EmailJS API error: {response.status_code} - {response.text}")
+                return False
+                
+    except Exception as e:
+        print(f"[EMAIL ERROR] EmailJS exception: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 
 async def send_activation_email(email: str, activation_token: str, user_name: str) -> bool:
     """Send account activation email"""
     try:
         print(f"[EMAIL] Attempting to send activation email to: {email}")
-        
-        # Validate email configuration
-        if not settings.smtp_host or settings.smtp_host.strip() == "":
-            print("[EMAIL ERROR] SMTP_HOST not configured in Railway environment variables")
-            print("[EMAIL ERROR] Please set SMTP_HOST=smtp.gmail.com in Railway Variables")
-            return False
-        
-        if not settings.smtp_user or settings.smtp_user == "your-email@gmail.com" or settings.smtp_user.strip() == "":
-            print("[EMAIL ERROR] SMTP_USER not configured in Railway environment variables")
-            print("[EMAIL ERROR] Please set SMTP_USER=zenvia07@gmail.com in Railway Variables")
-            return False
-        
-        if not settings.smtp_password or settings.smtp_password == "your-app-password" or settings.smtp_password.strip() == "":
-            print("[EMAIL ERROR] SMTP_PASSWORD not configured in Railway environment variables")
-            print("[EMAIL ERROR] Please set SMTP_PASSWORD=ogntznelsmhkqdvi in Railway Variables")
-            return False
-        
-        # Ensure recipient is different from sender
-        if email.lower() == settings.email_from.lower():
-            print(f"[EMAIL ERROR] Recipient cannot be the same as sender!")
-            return False
         
         # Create activation URL
         base_url = os.getenv("FRONTEND_URL") or os.getenv("RAILWAY_PUBLIC_DOMAIN")
@@ -52,20 +100,9 @@ async def send_activation_email(email: str, activation_token: str, user_name: st
         activation_url = f"{base_url}/?token={activation_token}"
         print(f"[EMAIL] Activation URL: {activation_url}")
         
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = "Activate Your Account - Login API"
-        
-        # Format sender with display name to hide email address
-        if '<' in settings.email_from and '>' in settings.email_from:
-            msg['From'] = settings.email_from
-        else:
-            msg['From'] = f"Login App <{settings.email_from}>"
-        
-        msg['To'] = email
-        
-        # Email body
-        text = f"""
+        # Email content
+        subject = "Activate Your Account - Login API"
+        text_content = f"""
 Hello {user_name},
 
 Thank you for registering with our service! 
@@ -82,7 +119,7 @@ Best regards,
 Login API Team
         """
         
-        html = f"""
+        html_content = f"""
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -108,120 +145,15 @@ Login API Team
         </html>
         """
         
-        # Attach parts
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send email with retry logic - try multiple ports and SSL configurations
-        smtp_host = settings.smtp_host.strip()
-        if not smtp_host:
-            print("[EMAIL ERROR] SMTP_HOST is empty! Please set it in Railway Variables")
-            return False
-        
-        # Try multiple SMTP configurations: 465 (SSL), 587 (STARTTLS), 25 (fallback)
-        smtp_configs = [
-            {"port": 465, "use_ssl": True, "use_starttls": False},
-            {"port": 587, "use_ssl": False, "use_starttls": True},
-            {"port": 25, "use_ssl": False, "use_starttls": True},
-        ]
-        
-        async def send_email_sync(config):
-            """Wrapper to run SMTP operations in executor with timeout"""
-            import concurrent.futures
-            loop = asyncio.get_event_loop()
-            
-            def _send():
-                port = config["port"]
-                use_ssl = config["use_ssl"]
-                use_starttls = config["use_starttls"]
-                
-                print(f"[EMAIL] Trying SMTP: {smtp_host}:{port} (SSL={use_ssl}, STARTTLS={use_starttls})")
-                
-                try:
-                    if use_ssl:
-                        # Port 465: Use SMTP_SSL for direct SSL connection
-                        server = smtplib.SMTP_SSL(smtp_host, port, timeout=15)
-                    else:
-                        # Port 587 or 25: Use regular SMTP with STARTTLS
-                        server = smtplib.SMTP(smtp_host, port, timeout=15)
-                        if use_starttls:
-                            server.starttls()
-                    
-                    server.login(settings.smtp_user, settings.smtp_password)
-                    server.send_message(msg)
-                    return True
-                finally:
-                    try:
-                        server.quit()
-                    except:
-                        pass
-            
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = loop.run_in_executor(executor, _send)
-                try:
-                    return await asyncio.wait_for(future, timeout=25.0)
-                except asyncio.TimeoutError:
-                    print(f"[EMAIL] Connection to {smtp_host}:{config['port']} timed out")
-                    return False
-        
-        max_retries = 2
-        retry_delay = 2
-        
-        # Try each SMTP configuration
-        for config in smtp_configs:
-            print(f"[EMAIL] Trying SMTP configuration: port {config['port']}")
-            for attempt in range(max_retries):
-                try:
-                    result = await send_email_sync(config)
-                    if result:
-                        print(f"[EMAIL SUCCESS] Activation email sent successfully to {email} via port {config['port']}")
-                        return True
-                    else:
-                        if attempt < max_retries - 1:
-                            print(f"[EMAIL] Port {config['port']} failed (attempt {attempt + 1}/{max_retries}), retrying...")
-                            await asyncio.sleep(retry_delay)
-                            continue
-                        else:
-                            print(f"[EMAIL] Port {config['port']} failed after {max_retries} attempts, trying next port...")
-                            break
-                
-                except OSError as e:
-                    error_msg = str(e)
-                    print(f"[EMAIL ERROR] OSError on port {config['port']}: {error_msg}")
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(retry_delay)
-                        continue
-                    break
-                    
-                except smtplib.SMTPAuthenticationError as e:
-                    error_msg = f"[EMAIL ERROR] SMTP Authentication failed on port {config['port']}: {e}"
-                    print(error_msg)
-                    print("[EMAIL ERROR] Please check your email and app password in Railway environment variables")
-                    print(f"[EMAIL ERROR] SMTP_USER: {settings.smtp_user}")
-                    print(f"[EMAIL ERROR] SMTP_PASSWORD length: {len(settings.smtp_password) if settings.smtp_password else 0} characters")
-                    # Don't retry auth errors, but try next port
-                    break
-                    
-                except smtplib.SMTPException as e:
-                    error_msg = f"[EMAIL ERROR] SMTP error on port {config['port']}: {e}"
-                    print(error_msg)
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(retry_delay)
-                        continue
-                    break
-                    
-                except Exception as e:
-                    error_msg = f"[EMAIL ERROR] Error on port {config['port']}: {e}"
-                    print(error_msg)
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(retry_delay)
-                        continue
-                    break
-        
-        print("[EMAIL ERROR] Failed to send email after all retry attempts")
-        return False
+        # Send via EmailJS
+        return await send_email_via_emailjs(
+            to_email=email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            user_name=user_name,
+            activation_url=activation_url
+        )
         
     except Exception as e:
         error_msg = f"[EMAIL ERROR] Error sending activation email: {e}"
@@ -241,20 +173,8 @@ async def send_password_reset_email(email: str, reset_token: str, user_name: str
         
         reset_url = f"{base_url}/reset-password?token={reset_token}"
         
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = "Reset Your Password"
-        
-        # Format sender with display name
-        if '<' in settings.email_from and '>' in settings.email_from:
-            msg['From'] = settings.email_from
-        else:
-            msg['From'] = f"Login App <{settings.email_from}>"
-        
-        msg['To'] = email
-        
-        # Email body
-        text = f"""
+        subject = "Reset Your Password"
+        text_content = f"""
 Hello {user_name},
 
 You requested to reset your password. Click the link below to reset it:
@@ -266,7 +186,7 @@ This link will expire in 1 hour.
 If you didn't request this, please ignore this email and your password will remain unchanged.
         """
         
-        html = f"""
+        html_content = f"""
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -288,44 +208,16 @@ If you didn't request this, please ignore this email and your password will rema
         </html>
         """
         
-        # Attach parts
-        part1 = MIMEText(text, 'plain')
-        part2 = MIMEText(html, 'html')
-        msg.attach(part1)
-        msg.attach(part2)
-        
-        # Send email with retry logic
-        max_retries = 3
-        retry_delay = 2
-        
-        for attempt in range(max_retries):
-            try:
-                with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
-                    server.starttls()
-                    server.login(settings.smtp_user, settings.smtp_password)
-                    server.send_message(msg)
-                print(f"[EMAIL SUCCESS] Password reset email sent successfully to {email}")
-                return True
-                
-            except OSError as e:
-                if ("Network is unreachable" in str(e) or "101" in str(e)) and attempt < max_retries - 1:
-                    print(f"[EMAIL] Network error (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                else:
-                    print(f"[EMAIL ERROR] SMTP error: {e}")
-                    return False
-            except Exception as e:
-                print(f"[EMAIL ERROR] Error sending password reset email: {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                    continue
-                return False
-        
-        return False
-        
+        # Send via EmailJS
+        return await send_email_via_emailjs(
+            to_email=email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            user_name=user_name,
+            reset_url=reset_url
+        )
+            
     except Exception as e:
         print(f"[EMAIL ERROR] Error sending password reset email: {e}")
         import traceback

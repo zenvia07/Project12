@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     email_from: str = ""
+    # EmailJS configuration
+    emailjs_service_id: str = ""
+    emailjs_template_id: str = ""
+    emailjs_public_key: str = ""
     rate_limit_per_minute: int = 60
     cache_ttl_seconds: int = 300
 
