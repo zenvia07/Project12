@@ -299,7 +299,35 @@ async function handleRegister(e) {
             if (result.detail) {
                 if (typeof result.detail === 'string') {
                     errorMessage = result.detail;
-                    showFormError('registerForm', result.detail);
+                    // Check if error is email-related and show it in the email field
+                    const emailErrorKeywords = ['email', 'Email', 'EMAIL'];
+                    const isEmailError = emailErrorKeywords.some(keyword => result.detail.includes(keyword));
+                    
+                    if (isEmailError) {
+                        showFieldError('registerEmail', result.detail);
+                    } else {
+                        // For other errors, try to map to appropriate field
+                        const fieldMappings = {
+                            'first_name': 'firstName',
+                            'last_name': 'lastName',
+                            'date_of_birth': 'dateOfBirth',
+                            'phone_number': 'phoneNumber',
+                            'password': 'registerPassword'
+                        };
+                        
+                        let fieldFound = false;
+                        for (const [apiField, formField] of Object.entries(fieldMappings)) {
+                            if (result.detail.toLowerCase().includes(apiField.replace('_', ' '))) {
+                                showFieldError(formField, result.detail);
+                                fieldFound = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!fieldFound) {
+                            showFormError('registerForm', result.detail);
+                        }
+                    }
                 } else if (Array.isArray(result.detail)) {
                     // Pydantic validation errors
                     const errors = [];
