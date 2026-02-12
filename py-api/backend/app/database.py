@@ -30,12 +30,28 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-        # Allow reading from environment variables even if .env file doesn't exist
         env_ignore_empty = True
 
 
-# Load settings
-settings = Settings()
+# Load settings with better error handling
+try:
+    settings = Settings()
+except Exception as e:
+    import sys
+    print("\n" + "="*80)
+    print("ERROR: Missing required environment variables!")
+    print("="*80)
+    print("\nThe following environment variables MUST be set in Railway:")
+    print("  - MONGODB_URI (required)")
+    print("  - JWT_SECRET_KEY (required)")
+    print("\nPlease add these variables in Railway dashboard:")
+    print("  1. Go to your Railway project")
+    print("  2. Click on your service")
+    print("  3. Go to 'Variables' tab")
+    print("  4. Add MONGODB_URI and JWT_SECRET_KEY")
+    print("\nSee py-api/RAILWAY_ENV_VARIABLES.txt for all required variables.")
+    print("="*80 + "\n")
+    sys.exit(1)
 
 # Global database client
 client: Optional[AsyncIOMotorClient] = None
