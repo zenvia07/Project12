@@ -114,25 +114,41 @@ Login API Team
         msg.attach(part1)
         msg.attach(part2)
         
-        # Send email with retry logic and timeout protection
-        max_retries = 3
-        retry_delay = 2
+        # Send email with retry logic - try multiple ports and SSL configurations
+        smtp_host = settings.smtp_host.strip()
+        if not smtp_host:
+            print("[EMAIL ERROR] SMTP_HOST is empty! Please set it in Railway Variables")
+            return False
         
-        async def send_email_sync():
+        # Try multiple SMTP configurations: 465 (SSL), 587 (STARTTLS), 25 (fallback)
+        smtp_configs = [
+            {"port": 465, "use_ssl": True, "use_starttls": False},
+            {"port": 587, "use_ssl": False, "use_starttls": True},
+            {"port": 25, "use_ssl": False, "use_starttls": True},
+        ]
+        
+        async def send_email_sync(config):
             """Wrapper to run SMTP operations in executor with timeout"""
             import concurrent.futures
             loop = asyncio.get_event_loop()
             
             def _send():
-                smtp_host = settings.smtp_host.strip()
-                smtp_port = settings.smtp_port
+                port = config["port"]
+                use_ssl = config["use_ssl"]
+                use_starttls = config["use_starttls"]
                 
-                if not smtp_host:
-                    raise ValueError("SMTP_HOST is empty!")
+                print(f"[EMAIL] Trying SMTP: {smtp_host}:{port} (SSL={use_ssl}, STARTTLS={use_starttls})")
                 
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
                 try:
-                    server.starttls()
+                    if use_ssl:
+                        # Port 465: Use SMTP_SSL for direct SSL connection
+                        server = smtplib.SMTP_SSL(smtp_host, port, timeout=15)
+                    else:
+                        # Port 587 or 25: Use regular SMTP with STARTTLS
+                        server = smtplib.SMTP(smtp_host, port, timeout=15)
+                        if use_starttls:
+                            server.starttls()
+                    
                     server.login(settings.smtp_user, settings.smtp_password)
                     server.send_message(msg)
                     return True
@@ -145,37 +161,33 @@ Login API Team
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = loop.run_in_executor(executor, _send)
                 try:
-                    return await asyncio.wait_for(future, timeout=30.0)
+                    return await asyncio.wait_for(future, timeout=25.0)
                 except asyncio.TimeoutError:
-                    print("[EMAIL ERROR] SMTP connection timed out after 30 seconds")
-                    print("[EMAIL ERROR] Railway may be blocking SMTP connections on port 587")
+                    print(f"[EMAIL] Connection to {smtp_host}:{config['port']} timed out")
                     return False
         
-        for attempt in range(max_retries):
-            try:
-                smtp_host = settings.smtp_host.strip()
-                smtp_port = settings.smtp_port
-                print(f"[EMAIL] Attempt {attempt + 1}/{max_retries}: Connecting to SMTP server: {smtp_host}:{smtp_port}")
-                
-                if not smtp_host:
-                    print("[EMAIL ERROR] SMTP_HOST is empty! Please set it in Railway Variables")
-                    return False
-                
-                result = await send_email_sync()
-                if result:
-                    print(f"[EMAIL SUCCESS] Activation email sent successfully to {email}")
-                    return True
-                else:
-                    if attempt < max_retries - 1:
-                        print(f"[EMAIL] Connection failed (attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
-                        await asyncio.sleep(retry_delay)
-                        retry_delay *= 2
-                        continue
+        max_retries = 2
+        retry_delay = 2
+        
+        # Try each SMTP configuration
+        for config in smtp_configs:
+            print(f"[EMAIL] Trying SMTP configuration: port {config['port']}")
+            for attempt in range(max_retries):
+                try:
+                    result = await send_email_sync(config)
+                    if result:
+                        print(f"[EMAIL SUCCESS] Activation email sent successfully to {email} via port {config['port']}")
+                        return True
                     else:
-                        print("[EMAIL ERROR] Failed to send email after all retry attempts")
-                        return False
+                        if attempt < max_retries - 1:
+                            print(f"[EMAIL] Port {config['port']} failed (attempt {attempt + 1}/{max_retries}), retrying...")
+                            await asyncio.sleep(retry_delay)
+                            continue
+                        else:
+                            print(f"[EMAIL] Port {config['port']} failed after {max_retries} attempts, trying next port...")
+                            break
                 
-            except OSError as e:
+                except OSError as e:
                 error_msg = str(e)
                 print(f"[EMAIL ERROR] OSError: {error_msg}")
                 if ("Network is unreachable" in error_msg or "101" in error_msg or "timed out" in error_msg.lower()) and attempt < max_retries - 1:
